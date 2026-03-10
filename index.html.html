@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Programa de Integração — Consulta de Presença</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161920;
+    --border: #252830;
+    --accent: #4ade80;
+    --accent-dim: rgba(74,222,128,0.12);
+    --danger: #f87171;
+    --danger-dim: rgba(248,113,113,0.12);
+    --warn: #fbbf24;
+    --warn-dim: rgba(251,191,36,0.12);
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --card: #1c1f28;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(74,222,128,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 110%, rgba(74,222,128,0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+  .header { margin-bottom: 56px; animation: fadeDown 0.6s ease both; }
+  .header-tag {
+    display: inline-block;
+    font-family: 'Syne', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(74,222,128,0.3);
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  h1 span { color: var(--accent); }
+  .subtitle { font-size: 15px; color: var(--muted); font-weight: 300; line-height: 1.6; }
+  .search-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 40px;
+    animation: fadeDown 0.6s 0.1s ease both;
+  }
+  .search-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .search-row { display: flex; gap: 12px; }
+  .search-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.1em;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-input::placeholder { color: var(--muted); font-weight: 400; font-size: 14px; letter-spacing: 0.02em; }
+  .search-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .search-btn {
+    background: var(--accent);
+    color: #0a0f0a;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 28px;
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: transform 0.15s, opacity 0.15s;
+    white-space: nowrap;
+  }
+  .search-btn:hover { opacity: 0.85; transform: translateY(-1px); }
+  .search-btn:active { transform: translateY(0); }
+
+  .section-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+  }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .employee-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .employee-name-block h2 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; color: #fff; }
+  .employee-name-block p  { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .badge { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px; letter-spacing: 0.05em; }
+  .badge-complete { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(74,222,128,0.3); }
+  .badge-partial  { background: var(--warn-dim);   color: var(--warn);   border: 1px solid rgba(251,191,36,0.3); }
+  .badge-start    { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(248,113,113,0.3); }
+
+  .progress-block { margin-bottom: 28px; }
+  .progress-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .progress-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500; }
+  .progress-count { font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800; color: #fff; }
+  .progress-count span { font-size: 14px; color: var(--muted); font-weight: 400; }
+  .progress-bar-bg { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .progress-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #22c55e, #4ade80);
+    transition: width 1s cubic-bezier(0.25, 1, 0.5, 1);
+    width: 0%;
+  }
+
+  .themes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .theme-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px; border-radius: 10px; border: 1px solid transparent; transition: transform 0.15s;
+  }
+  .theme-item:hover { transform: translateY(-1px); }
+  .theme-item.done    { background: var(--accent-dim); border-color: rgba(74,222,128,0.2); }
+  .theme-item.missing { background: rgba(248,113,113,0.06); border-color: rgba(248,113,113,0.15); }
+  .theme-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
+  .theme-item.done    .theme-icon { background: rgba(74,222,128,0.2); }
+  .theme-item.missing .theme-icon { background: rgba(248,113,113,0.15); }
+  .theme-name { font-size: 13px; font-weight: 500; line-height: 1.3; }
+  .theme-item.done    .theme-name { color: #a7f3c0; }
+  .theme-item.missing .theme-name { color: #fca5a5; }
+
+  /* Agenda */
+  .agenda-titulo {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px; font-weight: 700; color: #fff;
+    margin-bottom: 16px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+  }
+  .agenda-mes-badge {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--warn); background: var(--warn-dim);
+    border: 1px solid rgba(251,191,36,0.3); padding: 3px 10px; border-radius: 20px;
+  }
+  .agenda-header-row {
+    display: grid; grid-template-columns: 1fr 90px 120px 32px;
+    gap: 8px; padding: 0 12px 10px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); border-bottom: 1px solid var(--border); margin-bottom: 8px;
+  }
+  .agenda-row {
+    display: grid; grid-template-columns: 1fr 90px 120px 32px;
+    gap: 8px; align-items: center;
+    padding: 12px; border-radius: 10px; margin-bottom: 4px;
+    border: 1px solid transparent; transition: transform 0.15s;
+  }
+  .agenda-row:hover { transform: translateX(2px); }
+  .agenda-row.pendente { background: rgba(251,191,36,0.07); border-color: rgba(251,191,36,0.2); }
+  .agenda-row.feito    { background: rgba(74,222,128,0.05); border-color: rgba(74,222,128,0.1); opacity: 0.6; }
+  .agenda-curso { font-size: 13px; font-weight: 500; }
+  .agenda-row.pendente .agenda-curso { color: var(--warn); }
+  .agenda-row.feito    .agenda-curso { color: #6b7280; text-decoration: line-through; }
+  .agenda-dia  { font-size: 13px; color: var(--muted); }
+  .agenda-hora { font-size: 12px; color: var(--muted); }
+  .agenda-status { font-size: 16px; text-align: center; }
+  .agenda-legenda { display: flex; gap: 16px; margin-top: 14px; flex-wrap: wrap; }
+  .legenda-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+
+  .msg-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 28px 32px; text-align: center; color: var(--muted); font-size: 15px;
+  }
+  .msg-box strong { display: block; color: var(--text); font-size: 17px; margin-bottom: 8px; font-family: 'Syne', sans-serif; }
+  .spinner {
+    width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.7s linear infinite; margin: 32px auto;
+  }
+  #result { animation: fadeUp 0.5s ease both; }
+  @keyframes fadeDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes fadeUp   { from { opacity:0; transform:translateY(16px);  } to { opacity:1; transform:translateY(0); } }
+  @keyframes spin     { to { transform:rotate(360deg); } }
+  @media (max-width: 540px) {
+    .search-row { flex-direction: column; }
+    .themes-grid { grid-template-columns: 1fr 1fr; }
+    .section-card { padding: 20px; }
+    .agenda-header-row, .agenda-row { grid-template-columns: 1fr 72px 90px 28px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header class="header">
+    <div class="header-tag">Programa de Integração</div>
+    <h1>Consulta de <span>Presença</span></h1>
+    <p class="subtitle">Digite sua matrícula para ver seu progresso e a agenda do mês.</p>
+  </header>
+  <div class="search-section">
+    <label class="search-label" for="matricula">Sua matrícula</label>
+    <div class="search-row">
+      <input type="text" id="matricula" class="search-input" placeholder="Ex: 25158" maxlength="10" inputmode="numeric" />
+      <button class="search-btn" onclick="buscar()">Consultar</button>
+    </div>
+  </div>
+  <div id="result"></div>
+</div>
+
+<script>
+const SHEET_ID     = '1xpLuDa4v4wdIxezcioWupmG2vGVnbFY69QH1j_ei08k';
+const ABA_PRESENCA = 'PRESEN%C3%87A';
+const ABA_AGENDA   = 'AGENDA';
+
+const COL_FILIAL       = 0;
+const COL_REGIAO       = 1;
+const COL_MATRICULA    = 2;
+const COL_TEMAS_INICIO = 5;
+
+const TEMAS = [
+  'Cultura','Projeto Engrenagem','Jornada','Benefícios',
+  'Sistemas','Web Vendas','PRA','VEN','DER',
+  'Excelência Comercial','Diretoria Adm e Logística','Gestão Comercial'
+];
+const ICONS = ['🌱','⚙️','🗺️','🎁','💻','🛒','📋','💰','📦','🏆','🏢','📊'];
+
+function normStr(s) {
+  return String(s).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, '').trim();
+}
+
+// Cada entrada: [fragmento normalizado, nome do tema oficial]
+const MAPA = [
+  ['jornada',           'Jornada'],
+  ['engrenagem',        'Projeto Engrenagem'],
+  ['cultura',           'Cultura'],
+  ['beneficio',         'Benefícios'],
+  ['sistema',           'Sistemas'],
+  ['web venda',         'Web Vendas'],
+  ['pra',               'PRA'],
+  ['ven',               'VEN'],
+  ['der',               'DER'],
+  ['excelencia',        'Excelência Comercial'],
+  ['excellencia',       'Excelência Comercial'],
+  ['diretoria',         'Diretoria Adm e Logística'],
+  ['gestao comercial',  'Gestão Comercial'],
+];
+
+function agendaParaTema(nomeAgenda) {
+  const n = normStr(nomeAgenda);
+  for (const [frag, tema] of MAPA) {
+    if (n.includes(frag)) return tema;
+  }
+  return null;
+}
+
+function parseCsv(text) {
+  // Retorna TODAS as linhas incluindo a primeira (que o gviz já descarta o header original)
+  return text.split('\n').filter(l => l.trim()).map(linha => {
+    const cols = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < linha.length; i++) {
+      const c = linha[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === ',' && !inQ) { cols.push(cur.trim().replace(/^"|"$/g, '')); cur = ''; }
+      else { cur += c; }
+    }
+    cols.push(cur.trim().replace(/^"|"$/g, ''));
+    return cols;
+  });
+}
+
+async function fetchAba(aba) {
+  const bust = Date.now();
+  const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${aba}&cachebust=${bust}`;
+  const proxies = [
+    `https://corsproxy.io/?url=${encodeURIComponent(csvUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(csvUrl)}`,
+    `https://thingproxy.freeboard.io/fetch/${csvUrl}`,
+  ];
+  for (const proxyUrl of proxies) {
+    try {
+      const resp = await fetch(proxyUrl, { cache: 'no-store' });
+      if (!resp.ok) continue;
+      const text = await resp.text();
+      if (text && text.length > 10) return parseCsv(text);
+    } catch (e) { /* tenta o próximo */ }
+  }
+  throw new Error('Não foi possível carregar os dados. Tente novamente em instantes.');
+}
+
+async function buscar() {
+  const mat = document.getElementById('matricula').value.trim();
+  const div = document.getElementById('result');
+
+  if (!mat) {
+    div.innerHTML = `<div class="msg-box"><strong>Campo vazio</strong>Digite sua matrícula para consultar.</div>`;
+    return;
+  }
+
+  div.innerHTML = `<div class="spinner"></div>`;
+
+  try {
+    const [presRows, agendaRows] = await Promise.all([
+      fetchAba(ABA_PRESENCA),
+      fetchAba(ABA_AGENDA),
+    ]);
+
+    // ── PRESENÇAS ──
+    // presRows[0] = cabeçalho, dados a partir de [1]
+    const linha = presRows.slice(1).find(r => r[COL_MATRICULA] === mat);
+    if (!linha) {
+      div.innerHTML = `<div class="msg-box"><strong>Matrícula não encontrada</strong>Verifique o número digitado e tente novamente.</div>`;
+      return;
+    }
+
+    const regiao = linha[COL_REGIAO] || '—';
+    const filial = linha[COL_FILIAL] || '—';
+
+    const presencas = TEMAS.map((tema, i) => ({
+      tema, icone: ICONS[i],
+      presente: (linha[COL_TEMAS_INICIO + i] || '').toLowerCase().includes('presente'),
+    }));
+
+    const feitos = presencas.filter(p => p.presente).length;
+    const total  = TEMAS.length;
+    const pct    = Math.round((feitos / total) * 100);
+
+    let badgeClass, badgeLabel;
+    if (feitos === total) { badgeClass = 'badge-complete'; badgeLabel = 'Ciclo Completo ✓'; }
+    else if (feitos === 0) { badgeClass = 'badge-start';   badgeLabel = 'Não iniciado'; }
+    else                   { badgeClass = 'badge-partial'; badgeLabel = 'Em andamento'; }
+
+    const temasHTML = presencas.map(p => `
+      <div class="theme-item ${p.presente ? 'done' : 'missing'}">
+        <div class="theme-icon">${p.icone}</div>
+        <div class="theme-name">${p.tema}</div>
+      </div>`).join('');
+
+    // ── AGENDA ──
+    // agendaRows[0] = "AGENDA E-PIMM OUTUBRO" (título mesclado)
+    // agendaRows[1] = "CURSO | DIA | HORÁRIO"  (cabeçalho)
+    // agendaRows[2..] = dados reais
+    // Detecta título e cabeçalho dinamicamente
+    // Pula linhas até achar a linha de cabeçalho (CURSO/DIA/HORÁRIO)
+    let tituloAgenda = 'Agenda do Mês';
+    let inicioAgenda = 0;
+    for (let i = 0; i < agendaRows.length; i++) {
+      const cell = (agendaRows[i][0] || '').toLowerCase().trim();
+      if (cell.includes('agenda') || cell.includes('epimm') || cell.includes('e-pimm') || cell.includes('integracao') || cell.includes('integração')) {
+        tituloAgenda = agendaRows[i][0];
+        continue;
+      }
+      if (cell === 'curso' || cell === 'course') {
+        inicioAgenda = i + 1; // dados começam na linha seguinte ao cabeçalho
+        break;
+      }
+    }
+    const dadosAgenda = agendaRows.slice(inicioAgenda).filter(r => r[0] && r[0].trim() !== '' && r[0].toLowerCase() !== 'curso');
+
+    const temasFeitosSet = new Set(presencas.filter(p => p.presente).map(p => p.tema));
+
+    let pendentes = 0;
+    const agendaHTML = dadosAgenda.map(row => {
+      const curso   = row[0] || '';
+      const dia     = row[1] || '';
+      const horario = row[2] || '';
+      const tema    = agendaParaTema(curso);
+      const jaFez   = tema ? temasFeitosSet.has(tema) : false;
+      if (!jaFez) pendentes++;
+      return `
+        <div class="agenda-row ${jaFez ? 'feito' : 'pendente'}">
+          <div class="agenda-curso">${curso}</div>
+          <div class="agenda-dia">${dia}</div>
+          <div class="agenda-hora">${horario}</div>
+          <div class="agenda-status">${jaFez ? '✅' : '⚠️'}</div>
+        </div>`;
+    }).join('');
+
+    div.innerHTML = `
+      <div class="section-card">
+        <div class="employee-meta">
+          <div class="employee-name-block">
+            <h2>Matrícula ${mat}</h2>
+            <p>Filial ${filial} &nbsp;·&nbsp; ${regiao}</p>
+          </div>
+          <span class="badge ${badgeClass}">${badgeLabel}</span>
+        </div>
+        <div class="progress-block">
+          <div class="progress-header">
+            <span class="progress-label">Temas concluídos</span>
+            <span class="progress-count">${feitos} <span>/ ${total} temas</span></span>
+          </div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" id="pbar"></div></div>
+        </div>
+        <div class="section-title">Detalhamento por tema</div>
+        <div class="themes-grid">${temasHTML}</div>
+      </div>
+
+      <div class="section-card">
+        <div class="agenda-titulo">
+          ${tituloAgenda}
+          ${pendentes > 0
+            ? `<span class="agenda-mes-badge">${pendentes} pendente${pendentes > 1 ? 's' : ''}</span>`
+            : `<span class="badge badge-complete">Todos assistidos ✓</span>`}
+        </div>
+        <div class="agenda-header-row">
+          <div>Curso</div><div>Data</div><div>Horário</div><div></div>
+        </div>
+        ${agendaHTML}
+        <div class="agenda-legenda">
+          <div class="legenda-item">⚠️ <span>Você ainda não assistiu</span></div>
+          <div class="legenda-item">✅ <span>Você já assistiu</span></div>
+        </div>
+      </div>`;
+
+    setTimeout(() => {
+      const pb = document.getElementById('pbar');
+      if (pb) pb.style.width = pct + '%';
+    }, 50);
+
+  } catch (e) {
+    div.innerHTML = `<div class="msg-box"><strong>Erro ao carregar dados</strong>Verifique se a planilha está pública e tente novamente.<br><small style="color:#6b7280;font-size:12px;margin-top:8px;display:block">${e.message}</small></div>`;
+  }
+}
+
+document.getElementById('matricula').addEventListener('keydown', e => {
+  if (e.key === 'Enter') buscar();
+});
+</script>
+</body>
+</html>
